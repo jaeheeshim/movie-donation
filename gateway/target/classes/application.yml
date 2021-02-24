@@ -1,6 +1,8 @@
 server:
   port: 8088
+
 ---
+
 spring:
   profiles: default
   cloud:
@@ -9,11 +11,11 @@ spring:
         - id: book
           uri: http://localhost:8081
           predicates:
-            - Path=/books/**
+            - Path=/books/** 
         - id: payment
           uri: http://localhost:8082
           predicates:
-            - Path=/payments/**
+            - Path=/payments/** 
         - id: mypage
           uri: http://localhost:8083
           predicates:
@@ -21,15 +23,15 @@ spring:
         - id: ticket
           uri: http://localhost:8084
           predicates:
-            - Path=/tickets/**
+            - Path=/tickets/** 
         - id: donation
           uri: http://localhost:8085
           predicates:
             - Path=/donations/**
-
+          
       globalcors:
         corsConfigurations:
-          "[/**]":
+          '[/**]':
             allowedOrigins:
               - "*"
             allowedMethods:
@@ -37,7 +39,10 @@ spring:
             allowedHeaders:
               - "*"
             allowCredentials: true
+
+
 ---
+
 spring:
   profiles: docker
   cloud:
@@ -46,11 +51,11 @@ spring:
         - id: book
           uri: http://book:8080
           predicates:
-            - Path=/books/**
+            - Path=/books/** 
         - id: payment
           uri: http://payment:8080
           predicates:
-            - Path=/payments/**
+            - Path=/payments/** 
         - id: mypage
           uri: http://mypage:8080
           predicates:
@@ -58,14 +63,10 @@ spring:
         - id: ticket
           uri: http://ticket:8080
           predicates:
-            - Path=/tickets/**
-        - id: donation
-          uri: http://localhost:8085
-          predicates:
-            - Path=/donations/**
+            - Path=/tickets/**            
       globalcors:
         corsConfigurations:
-          "[/**]":
+          '[/**]':
             allowedOrigins:
               - "*"
             allowedMethods:

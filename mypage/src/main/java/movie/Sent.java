@@ -1,38 +1,13 @@
+
 package movie;
 
-import javax.persistence.*;
-import org.springframework.beans.BeanUtils;
-import java.util.List;
+public class Sent extends AbstractEvent {
 
-@Entity
-@Table(name="Donation_table")
-public class Donation {
-
-    @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
     private Long id;
     private Long bookingId;
     private Integer value;
     private String organization;
     private String status;
-
-    @PrePersist
-    public void onPrePersist(){
-        // try {
-        //     Thread.currentThread().sleep((long) (400 + Math.random() * 220));
-        //     System.out.println("#################");
-        // } catch (InterruptedException e) {
-        //     e.printStackTrace();
-        // }
-        
-        if("Donated".equals(status)){
-            Sent sent = new Sent();
-            BeanUtils.copyProperties(this, sent);
-            sent.publishAfterCommit();
-        } 
-        
-    }
-
 
     public Long getId() {
         return id;
@@ -69,8 +44,4 @@ public class Donation {
     public void setStatus(String status) {
         this.status = status;
     }
-
-
-
-
 }

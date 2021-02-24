@@ -16,7 +16,8 @@ public class Mypage {
         private String seat;
         private String status;
         private Integer price;
-
+        private Integer donationValue;
+        private String donationOrganization;
 
 
         public Long getId() {
@@ -67,6 +68,21 @@ public class Mypage {
 
         public void setPrice(Integer price) {
             this.price = price;
+        }
+
+        public Integer getDonationValue() {
+            return donationValue;
+        }
+    
+        public void setDonationValue(Integer donationValue) {
+            this.donationValue = donationValue;
+        }
+        public String getDonationOrganization() {
+            return donationOrganization;
+        }
+    
+        public void setDonationOrganization(String donationOrganization) {
+            this.donationOrganization = donationOrganization;
         }
 
 }

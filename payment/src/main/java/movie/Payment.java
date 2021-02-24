@@ -17,12 +17,12 @@ public class Payment {
 
     @PrePersist
     public void onPrePersist(){
-        try {
-            Thread.currentThread().sleep((long) (400 + Math.random() * 220));
-            System.out.println("#################");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        // try {
+        //     Thread.currentThread().sleep((long) (400 + Math.random() * 220));
+        //     System.out.println("#################");
+        // } catch (InterruptedException e) {
+        //     e.printStackTrace();
+        // }
         
         if("Paid".equals(status)){
             Paid paid = new Paid();

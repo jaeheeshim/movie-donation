@@ -34,6 +34,20 @@ public class Ticket {
             Printed printed = new Printed();
             BeanUtils.copyProperties(this, printed);
             printed.setStatus("Printed");
+            
+            movie.external.Donation donation = new movie.external.Donation();
+            System.out.println("*********************");
+            System.out.println("기부 이벤트 발생");
+            System.out.println("*********************");
+            
+            // mappings goes here
+            donation.setBookingId(printed.getBookingId());
+            donation.setStatus("Donated");
+            donation.setValue(1000);
+            donation.setOrganization("Good Neighbors");
+            TicketApplication.applicationContext.getBean(movie.external.DonationService.class)
+                .send(donation);
+            
             printed.publishAfterCommit();
 
         }
