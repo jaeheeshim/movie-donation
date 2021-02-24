@@ -24,6 +24,10 @@ spring:
           uri: http://localhost:8084
           predicates:
             - Path=/tickets/** 
+        - id: donation
+          uri: http://localhost:8085
+          predicates:
+            - Path=/donations/**
           
       globalcors:
         corsConfigurations:

@@ -2,8 +2,8 @@ version: 0.2
 
 env:
   variables:
-    _PROJECT_NAME: "ticket"
-    _PROJECT_DIR: "ticket"
+    _PROJECT_NAME: "donation"
+    _PROJECT_DIR: "donation"
 
 phases:
   install:
@@ -80,6 +80,12 @@ phases:
                   image: $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/skccuser08-$_PROJECT_NAME:$CODEBUILD_RESOLVED_SOURCE_VERSION
                   ports:
                     - containerPort: 8080
+                  env:
+                    - name: NAME
+                      valueFrom:
+                        configMapKeyRef:
+                          name: moviecm
+                          key: text1
                   readinessProbe:
                     httpGet:
                       path: /actuator/health
