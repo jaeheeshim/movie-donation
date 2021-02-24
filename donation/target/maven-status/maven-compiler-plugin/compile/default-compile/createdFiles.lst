@@ -1,0 +1,10 @@
+movie/Donation.class
+movie/DonationController.class
+movie/DonationRepository.class
+movie/Sent.class
+movie/AbstractEvent$1.class
+movie/AbstractEvent.class
+movie/DonationApplication.class
+movie/Printed.class
+movie/config/kafka/KafkaProcessor.class
+movie/PolicyHandler.class

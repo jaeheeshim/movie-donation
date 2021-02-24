@@ -1,0 +1,12 @@
+movie/Canceled.class
+movie/Ticket.class
+movie/Created.class
+movie/AbstractEvent$1.class
+movie/AbstractEvent.class
+movie/TicketRepository.class
+movie/TicketApplication.class
+movie/config/kafka/KafkaProcessor.class
+movie/PolicyHandler.class
+movie/Booked.class
+movie/TicketController.class
+movie/Printed.class

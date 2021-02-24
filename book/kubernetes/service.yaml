@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: book
+  namespace: movie
+  labels:
+    app: book
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: book
