@@ -15,6 +15,7 @@ public class Donation {
     private Integer value;
     private String organization;
     private String status;
+    private String name = System.getenv("NAME");
 
     @PrePersist
     public void onPrePersist(){
