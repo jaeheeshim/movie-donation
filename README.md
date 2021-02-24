@@ -1,6 +1,6 @@
-# 영화 예매
+# 영화 예매 및 기부 서비스
 
-MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단계를 커버하도록 구성한 3조 프로젝트 과제입니다.
+MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단계를 커버하도록 구성한 개인 프로젝트 과제입니다.
 
 - 체크포인트 : https://workflowy.com/s/assessment-check-po/T5YrzcMewfo4J6LW
 
@@ -28,12 +28,13 @@ MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단�
 기능적 요구사항
 
 1. 고객이 영화 및 좌석을 선택하고 예매를 한다. 
-1. 고객이 결제를 진행한다.
-1. 예매 및 결제가 완료되면 티켓이 생성된다.
-1. 영화관에서 나의 예매 정보로 티켓을 수령한다.
-1. 티켓 수령 전까지 고객이 예매를 취소할 수 있다. 
-1. 예매가 취소되면 결제가 취소된다.
-1. 고객이 예매 내역 및 상태를 조회할 수 있다.
+2. 고객이 결제를 진행한다.
+3. 예매 및 결제가 완료되면 티켓이 생성된다.
+4. 영화관에서 나의 예매 정보로 티켓을 수령한다.
+5. 티켓 수령 시, 일정 금액이 '굿네이버스'에 기부된다. 
+6. 티켓 수령 전까지 고객이 예매를 취소할 수 있다. 
+7. 예매가 취소되면 결제가 취소된다.
+8. 고객이 예매 내역 및 상태를 조회할 수 있다.
 
 비기능적 요구사항
 
@@ -59,7 +60,7 @@ MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단�
 
 # 구현:
 
-분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 8084 이다)
+분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 8085 이다)
 
 ```
 cd book
@@ -76,64 +77,73 @@ mvn srping-boot:run
 
 cd gateway
 mvn spring-boot:run
+
+cd donation
+mvn spring-boot:run
 ```
 
 ## 동기식 호출
 
+* 팀 프로젝트 * 
 분석단계에서의 조건 중 하나로 예매(book)->결제(pay) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다.
+
+* 개인 프로젝트 *
+티켓 발권 (ticket) -> 기부 (donation) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다.
+
 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다.
 
-- 결제서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현
+- 기부 서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현
 
 ```
-# PaymentService.java
+# DonationService.java
 
 package movie.external;
 
-@FeignClient(name="payment", url="http://localhost:8082")
-public interface PaymentService {
+@FeignClient(name="donation", url="http://localhost:8085")
+public interface DonationService {
 
-    @RequestMapping(method= RequestMethod.POST, path="/payments")
-    public void pay(@RequestBody Payment payment);
-
-    @RequestMapping(method= RequestMethod.POST, path="/cancellations")
-    public void cancel(@RequestBody Payment payment);
+    @RequestMapping(method= RequestMethod.POST, path="/donations")
+    public void send(@RequestBody Donation donation);
 
 }
 ```
 
-- 예매 직후(@PostPersist) 결제를 요청하도록 처리
+- 발권 직후(@PostPersist) 기부를 요청하도록 처리
 
 ```
-# Book.java (Entity)
+# Ticket.java (Entity)
 
-    @PostPersist
-    public void onPostPersist(){
+    @PostUpdate
+    public void onPostUpdate(){
 
-        Booked booked = new Booked();
-        BeanUtils.copyProperties(this, booked);
-        
-        movie.external.Payment payment = new movie.external.Payment();
+        if("Printed".equals(status)){
+            Printed printed = new Printed();
+            BeanUtils.copyProperties(this, printed);
+            printed.setStatus("Printed");
+            
+            movie.external.Donation donation = new movie.external.Donation();
+            System.out.println("*********************");
+            System.out.println("기부 이벤트 발생");
+            System.out.println("*********************");
+            
+            // mappings goes here
+            donation.setBookingId(printed.getBookingId());
+            donation.setStatus("Donated");
+            donation.setValue(1000);
+            donation.setOrganization("Good Neighbors");
+            TicketApplication.applicationContext.getBean(movie.external.DonationService.class)
+                .send(donation);
+            
+            printed.publishAfterCommit();
 
-        System.out.println("*********************");
-        System.out.println("결제 이벤트 발생");
-        System.out.println("*********************");
-
-        // mappings goes here
-        payment.setBookingId(booked.getId());
-        payment.setStatus("Paid");
-        payment.setTotalPrice(booked.getTotalPrice());
-        BookApplication.applicationContext.getBean(movie.external.PaymentService.class)
-            .pay(payment);
-	    
-	booked.publishAfterCommit();
+        }
     }
 ```
 
-- 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 결제 시스템이 장애가 나면 예매도 못받는다는 것을 확인
+- 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 기부 시스템이 장애가 나면 발권 시스템도 못받는다는 것을 확인
 
 
-- 결제 (pay) 서비스를 잠시 내려놓음 (ctrl+c)
+- 기부 (donation) 서비스를 잠시 내려놓음 (ctrl+c)
 
 1. 예매처리
 
@@ -260,6 +270,10 @@ spring:
           uri: http://localhost:8084
           predicates:
             - Path=/tickets/** 
+        - id: donation
+          uri: http://localhost:8085
+          predicates:
+            - Path=/donations/**
           
       globalcors:
         corsConfigurations:
@@ -322,7 +336,7 @@ http http://localhost:8088/mypages/1
 		</dependency>
 
 
-# Ticket - pom.xml
+# Donation - pom.xml
 
 		<dependency>
 			<groupId>org.hsqldb</groupId>
@@ -341,14 +355,13 @@ http http://localhost:8088/mypages/1
 각 구현체들은 Amazon ECR(Elastic Container Registry)에 구성되었고, 사용한 CI/CD 플랫폼은 AWS Codebuild며, pipeline build script 는 각 프로젝트 폴더 이하에 buildspec.yml 에 포함되었다. 
 
 ```
-# ticket/buildspec.yaml
+# donation/buildspec.yaml
 version: 0.2
 
 env:
   variables:
-    _PROJECT_NAME: "ticket"
-    _PROJECT_DIR: "ticket"
-    CODEBUILD_RESOLVED_SOURCE_VERSION: "v3"
+    _PROJECT_NAME: "donation"
+    _PROJECT_DIR: "donation"
 
 phases:
   install:
@@ -458,12 +471,12 @@ readinessProbe:
 
 ## Self-healing(Liveness Probe)
 
-- buildspec.yaml 파일에 Liveness Probe 추가
+- donation 서비스의 buildspec.yaml 파일에 Liveness Probe 추가
 
 ```
   livenessProbe:
     httpGet:
-      path: /abc
+      path: /test
       port: 8080
     initialDelaySeconds: 120
     timeoutSeconds: 2
@@ -475,7 +488,7 @@ readinessProbe:
 
 ## Config Map
 
-- deployment.yml에 env 추가
+- donation 서비스의 deployment.yml에 env 추가
 
 
 ```
@@ -490,7 +503,7 @@ readinessProbe:
 
 ```
 
-- 예매와 동시에 환경변수로 설정한 NAME이 들어가도록 코드를 변경
+- 기부와 동시에 환경변수로 설정한 NAME이 들어가도록 코드를 변경
 
 ```
 @Id
@@ -501,7 +514,7 @@ readinessProbe:
 private String name = System.getenv("NAME");
 
 ```
-- configmap.yaml 작성
+- moviecm.yaml 작성
 
 ```
 apiVersion: v1
@@ -510,15 +523,15 @@ metadata:
   name: moviecm
   namespace: movie
 data:
-  text1: HyesunJeon
+  text1: Donation contributor is Shim Jaehee
 
 ```
 
-- book pod에 들어가서 환경변수 확인
+- donation pod에 들어가서 환경변수 확인
 
-<img width="1118" alt="스크린샷 2021-02-23 오후 7 02 08" src="https://user-images.githubusercontent.com/28583602/108828012-a3cf7f00-7609-11eb-952e-3cfb6e429bae.png">
+<img width="990" alt="스크린샷 2021-02-24 오후 7 56 02" src="https://user-images.githubusercontent.com/60732832/108993778-5cff8900-76de-11eb-8bad-b913b21048d4.png">
 
-- 예매와 동시에 name에 환경변수 적용 
+- 기부와 동시에 name에 환경변수 적용 
 
 <img width="1483" alt="스크린샷 2021-02-23 오후 7 03 21" src="https://user-images.githubusercontent.com/28583602/108828129-ceb9d300-7609-11eb-9f9d-228ca82b8f96.png">
 
