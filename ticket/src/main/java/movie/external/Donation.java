@@ -1,4 +1,4 @@
-package movie.external;
+package main.java.movie.external;
 
 public class Donation {
 
