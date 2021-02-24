@@ -5,8 +5,10 @@ movie/AbstractEvent$1.class
 movie/AbstractEvent.class
 movie/TicketRepository.class
 movie/TicketApplication.class
+movie/external/Donation.class
 movie/config/kafka/KafkaProcessor.class
 movie/PolicyHandler.class
 movie/Booked.class
 movie/TicketController.class
 movie/Printed.class
+movie/external/DonationService.class
