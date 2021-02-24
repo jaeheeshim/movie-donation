@@ -71,7 +71,13 @@ public class Donation {
         this.status = status;
     }
 
+    public String getName() {
+        return name;
+    }
 
+    public void setName(String name) {
+        this.name = name;
+    }
 
 
 }
