@@ -729,7 +729,7 @@ siege -c50 -t120S -r10 --content-type "application/json" 'http://ticket:8080/tic
 ```
 readinessProbe:
   httpGet:
-    path: /abc
+    path: /test
     port: 8080
   initialDelaySeconds: 10
   timeoutSeconds: 2
