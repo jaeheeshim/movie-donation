@@ -63,7 +63,12 @@ spring:
         - id: ticket
           uri: http://ticket:8080
           predicates:
-            - Path=/tickets/**            
+            - Path=/tickets/**
+        - id: donation
+          uri: http://donation:8080
+          predicates:
+            - Path=/donations/**
+                   
       globalcors:
         corsConfigurations:
           '[/**]':

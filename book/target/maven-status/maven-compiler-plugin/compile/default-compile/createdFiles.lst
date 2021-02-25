@@ -5,8 +5,8 @@ movie/config/kafka/KafkaProcessor.class
 movie/PolicyHandler.class
 movie/Paid.class
 movie/Booked.class
-movie/external/Payment.class
 movie/BookApplication.class
+movie/external/Payment.class
 movie/BookRepository.class
 movie/Book.class
 movie/BookController.class

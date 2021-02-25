@@ -17,6 +17,11 @@ spec:
       containers:
         - name: donation
           image: 496278789073.dkr.ecr.ap-northeast-2.amazonaws.com/skccuser08-donation:f79b14cc6467d4f05b9bbc6aeecffb2f1d964522
+          resources:
+            requests:
+              cpu: "300m"
+            limits:
+              cpu: "500m"
           ports:
             - containerPort: 8080
           env:
