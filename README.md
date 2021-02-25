@@ -433,23 +433,6 @@ cache:
 
 ![스크린샷 2021-02-25 오전 10 02 18](https://user-images.githubusercontent.com/60732832/109087424-c7e9a800-7750-11eb-9448-f49ffa94ac6c.png)
 
-## Zero-downtime deploy(Readiness Probe)
-
-- buildspec.yaml 파일에 Readiness Probe 추가
-
-```
-readinessProbe:
-  httpGet:
-    path: /abc
-    port: 8080
-  initialDelaySeconds: 10
-  timeoutSeconds: 2
-  periodSeconds: 5
-  failureThreshold: 10
-
-```
-<img width="1114" alt="스크린샷 2021-02-23 오후 1 49 07" src="https://user-images.githubusercontent.com/28583602/108803393-e8ddbc00-75dd-11eb-964d-cfd5d78cdfdd.png">
-
 
 ## Self-healing(Liveness Probe)
 
@@ -540,12 +523,12 @@ data:
 
 - 서킷 브레이킹 프레임워크의 선택: Spring FeignClient + Hystrix 옵션을 사용하여 구현함
 
-시나리오는 영화 예매 (book) --> 결제( payment ) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 결제 요청이 과도할 경우 CB 를 통하여 장애격리.
+시나리오는 영화 발권 (ticket) --> 기부( donation ) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 결제 요청이 과도할 경우 CB 를 통하여 장애격리.
 
 - Hystrix 를 설정: 요청처리 쓰레드에서 처리시간이 610 밀리가 넘어서기 시작하여 어느정도 유지되면 CB 회로가 닫히도록 (요청을 빠르게 실패처리, 차단) 설정
 
 ```
-# application.yml in book service
+# application.yml in ticket service
 
 feign:
   hystrix:
@@ -559,7 +542,7 @@ hystrix:
 
 ```
 
-- 피호출 서비스(결제: payment) 의 임의 부하 처리 - 400 밀리에서 증감 220 밀리 정도 왔다갔다 하게
+- 피호출 서비스(기부: donation) 의 임의 부하 처리 - 400 밀리에서 증감 220 밀리 정도 왔다갔다 하게
 
 ```
 # (payment) Payment.java (Entity)
@@ -582,80 +565,69 @@ hystrix:
 * 60초 동안 실시
 
 ```
-$ siege -c50 -t60S -r10 --content-type "application/json" 'http://book:8080/books POST {"qty":"3"}'
+$ siege -c50 -t60S -r10 --content-type "application/json" 'http://ticket:8080/tickets POST {"status":"Printed"}'
 
 ** SIEGE 4.0.5
 ** Preparing 50 concurrent users for battle.
 The server is now under siege...
 
-HTTP/1.1 201     1.17 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     1.26 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     1.25 secs:     282 bytes ==> POST http://book:8080/books
-
-* 요청이 과도하여 CB를 동작함 요청을 차단
-
-HTTP/1.1 201     1.51 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.38 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     2.65 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.98 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.87 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.86 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.77 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.78 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.37 secs:     282 bytes ==> POST http://book:8080/books
-
-* 요청을 어느정도 돌려보내고나니, 기존에 밀린 일들이 처리되었고, 회로를 닫아 요청을 다시 받기 시작
-
-HTTP/1.1 201     2.43 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.49 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.57 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.53 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.45 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.55 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     0.51 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.38 secs:     282 bytes ==> POST http://book:8080/books
-
-* 다시 요청이 쌓이기 시작하여 건당 처리시간이 610 밀리를 살짝 넘기기 시작 => 회로 열기 => 요청 실패처리
-
-HTTP/1.1 500     2.65 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.98 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.86 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.78 secs:     247 bytes ==> POST http://book:8080/books
-
-* 생각보다 빨리 상태 호전됨 - (건당 (쓰레드당) 처리시간이 610 밀리 미만으로 회복) => 요청 수락
-
-HTTP/1.1 201     2.37 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.51 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.40 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.64 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.64 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.64 secs:     282 bytes ==> POST http://book:8080/books
-
-* 이후 이러한 패턴이 계속 반복되면서 시스템은 도미노 현상이나 자원 소모의 폭주 없이 잘 운영됨
-
-HTTP/1.1 201     2.38 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.34 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.13 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     2.54 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.33 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     2.54 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.74 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.73 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.24 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.31 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.36 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     2.39 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.38 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 500     1.80 secs:     247 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     2.38 secs:     282 bytes ==> POST http://book:8080/books
-HTTP/1.1 201     4.49 secs:     282 bytes ==> POST http://book:8080/books
+HTTP/1.1 201     1.17 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     1.26 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     1.25 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     1.51 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.38 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     2.65 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.98 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.87 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.86 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.77 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.78 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.37 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.43 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.49 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.57 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.53 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.86 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.77 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.45 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.55 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     0.51 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.38 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     2.65 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.98 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.86 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.78 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.37 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.51 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.40 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.64 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.64 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.98 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.87 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.64 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.38 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.34 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.13 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     2.54 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.33 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     2.54 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.74 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.73 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.24 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.31 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.36 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     2.39 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.38 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 500     1.80 secs:     247 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     2.38 secs:     282 bytes ==> POST http://ticket:8080/tickets
+HTTP/1.1 201     4.49 secs:     282 bytes ==> POST http://ticket:8080/tickets
 
 
 :
 :
 
 Transactions:                   1030 hits
-Availability:                  62.05 %
+Availability:                  58.88 %
 Elapsed time:                  59.83 secs
 Data transferred:               0.43 MB
 Response time:                  2.85 secs
@@ -669,7 +641,7 @@ Shortest transaction:           0.01
 
 ```
 
-- 운영시스템은 죽지 않고 지속적으로 CB 에 의하여 적절히 회로가 열림과 닫힘이 벌어지면서 자원을 보호하고 있음을 보여줌. 하지만, 62% 가 성공하였고, 38%가 실패했다는 것은 고객 사용성에 있어 좋지 않기 때문에 Retry 설정과 동적 Scale out (replica의 자동적 추가,HPA) 을 통하여 시스템을 확장 해주는 후속처리가 필요.
+- 운영시스템은 죽지 않고 지속적으로 CB 에 의하여 적절히 회로가 열림과 닫힘이 벌어지면서 자원을 보호하고 있음을 보여줌. 하지만, 59% 가 성공하였고, 41%가 실패했다는 것은 고객 사용성에 있어 좋지 않기 때문에 Retry 설정과 동적 Scale out (replica의 자동적 추가,HPA) 을 통하여 시스템을 확장 해주는 후속처리가 필요.
 
 - Availability 가 높아진 것을 확인 (siege)
 
@@ -677,7 +649,7 @@ Shortest transaction:           0.01
 
 앞서 CB 는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다.
 
-- 결제서비스에 대한 deplyment.yml 파일에 해당 내용을 추가한다.
+- 기부 서비스에 대한 deplyment.yml 파일에 해당 내용을 추가한다.
 
 ```
   resources:
@@ -687,7 +659,7 @@ Shortest transaction:           0.01
       cpu: "500m"
 ```
 
-- 결제서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 15프로를 넘어서면 replica 를 10개까지 늘려준다:
+- 기부 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 15프로를 넘어서면 replica 를 10개까지 늘려준다:
 
 ```
 kubectl autoscale deploy payment --min=1 --max=10 --cpu-percent=15
@@ -696,7 +668,7 @@ kubectl autoscale deploy payment --min=1 --max=10 --cpu-percent=15
 - CB 에서 했던 방식대로 워크로드를 2분 동안 걸어준다.
 
 ```
-siege -c50 -t120S -r10 --content-type "application/json" 'http://book:8080/books POST {"qty": "3"}'
+siege -c50 -t120S -r10 --content-type "application/json" 'http://ticket:8080/tickets POST {"status": "Printed"}'
 ```
 
 - 오토스케일이 어떻게 되고 있는지 모니터링을 걸어둔다:
@@ -709,19 +681,19 @@ kubectl get deploy payment -w
 
 ```
 NAME      READY   UP-TO-DATE   AVAILABLE   AGE
-payment   1/1     1            1           81s
-payment   1/4     1            1           3m51s
-payment   1/8     4            1           4m6s
-payment   1/8     8            1           4m6s
-payment   1/9     8            1           4m21s
-payment   2/9     9            2           5m13s
-payment   3/9     9            3           5m18s
-payment   4/9     9            4           5m20s
-payment   5/9     9            5           5m28s
-payment   6/9     9            6           5m29s
-payment   7/9     9            7           5m29s
-payment   8/9     9            8           5m31s
-payment   9/9     9            9           5m42s
+donation   1/1     1            1           81s
+donation   1/4     1            1           3m51s
+donation   1/8     4            1           4m6s
+donation   1/8     8            1           4m6s
+donation   1/9     8            1           4m21s
+donation   2/9     9            2           5m13s
+donation   3/9     9            3           5m18s
+donation   4/9     9            4           5m20s
+donation   5/9     9            5           5m28s
+donation   6/9     9            6           5m29s
+donation   7/9     9            7           5m29s
+donation   8/9     9            8           5m31s
+donation   9/9     9            9           5m42s
 ```
 
 - siege 의 로그를 보아도 전체적인 성공률이 높아진 것을 확인 할 수 있다.
@@ -741,3 +713,47 @@ Longest transaction:            0.79
 Shortest transaction:           0.41
 ```
 
+## 무정지 재배포
+
+* 먼저 무정지 재배포가 100% 되는 것인지 확인하기 위해서 Autoscaler 이나 CB 설정을 제거함
+
+- seige 로 배포작업 직전에 워크로드를 모니터링 함.
+```
+siege -c50 -t120S -r10 --content-type "application/json" 'http://ticket:8080/tickets POST {"status": "Printed"}'
+
+```
+
+```
+# deployment.yaml 의 readiness probe 의 설정:
+
+```
+readinessProbe:
+  httpGet:
+    path: /abc
+    port: 8080
+  initialDelaySeconds: 10
+  timeoutSeconds: 2
+  periodSeconds: 5
+  failureThreshold: 10
+
+```
+
+- 동일한 시나리오로 재배포 한 후 Availability 확인:
+
+```
+Transactions:		        1107 hits
+Availability:		       100 %
+Elapsed time:		       119.85 secs
+Data transferred:	        0.29 MB
+Response time:		        1.20 secs
+Transaction rate:	        7.99 trans/sec
+Throughput:		        0.01 MB/sec
+Concurrency:		       96.02
+Successful transactions:        1107
+Failed transactions:               0
+Longest transaction:            0.88
+Shortest transaction:           0.31
+
+```
+
+배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
