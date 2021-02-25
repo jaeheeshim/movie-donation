@@ -721,12 +721,8 @@ Shortest transaction:           0.41
 ```
 siege -c50 -t120S -r10 --content-type "application/json" 'http://ticket:8080/tickets POST {"status": "Printed"}'
 
-```
-
-```
 # deployment.yaml 의 readiness probe 의 설정:
 
-```
 readinessProbe:
   httpGet:
     path: /test
