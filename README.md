@@ -40,9 +40,12 @@ MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단�
 
 1. 트랜잭션
    1. 결제가 되지 않은 예매 건은 아예 예매가 성립되지 않아야 한다. Sync 호출
+   2. 발권이 되지 않은 예매 건은 아예 기부가 성립되지 않아야 한다. Sync 호출
 1. 장애격리
    1. 티켓 수령 기능이 수행되지 않더라도 예매는 365일 24시간 받을 수 있어야 한다. Async (event-driven), Eventual Consistency
-   1. 결제시스템이 과중되면 사용자를 잠시동안 받지 않고 결제를 잠시후에 하도록 유도한다. Circuit breaker, fallback
+   2. 기부 기능이 수행되지 않더라도 티켓 발권은 365일 24시간 받을 수 있어야 한다. Async (event-driven), Eventual Consistency
+   3. 결제시스템이 과중되면 사용자를 잠시동안 받지 않고 결제를 잠시후에 하도록 유도한다. Circuit breaker, fallback
+   4. 기부시스템이 과중되면 사용자를 잠시동안 받지 않고 기부를 잠시후에 하도록 유도한다. Circuit breaker, fallback
 1. 성능
    1. 고객이 예매 내역을 my page(프론트엔드)에서 확인할 수 있어야 한다 CQRS
    1. 예매 상태가 바뀔때마다 mypage에서 확인 가능하여야 한다 Event driven
@@ -56,7 +59,7 @@ MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단�
 
 ## 헥사고날 아키텍처 다이어그램 도출
 
-![hexa3](https://user-images.githubusercontent.com/74696451/108833671-805c0280-7610-11eb-9973-26e166829676.png)
+![hexagonal](https://user-images.githubusercontent.com/60732832/109091583-6cbbb380-7758-11eb-802b-70b51d868d57.png)
 
 # 구현:
 
@@ -145,12 +148,12 @@ public interface DonationService {
 
 - 기부 (donation) 서비스를 잠시 내려놓음 (ctrl+c)
 
-1. 예매처리
+1. 발권 처리
 
 <img width="688" alt="스크린샷 2021-02-23 오전 11 16 37" src="https://user-images.githubusercontent.com/28583602/108794189-ab226880-75c8-11eb-8692-cb06effe8bb2.png">
 
 
-2. 결제서비스 재기동
+2. 기부 서비스 재기동
 ```
 cd ../payment
 mvn spring-boot:run
@@ -163,32 +166,30 @@ mvn spring-boot:run
 
 ## 비동기식 호출
 
-결제가 이루어진 후에 Ticket시스템으로 이를 알려주는 행위는 동기식이 아니라 비 동기식으로 처리한다.
+영화 예매 및 결재 후 티켓이 생성된 후에 기부 (donation) 시스템으로 이 상태를 알려주는 행위는 동기식이 아니라 비 동기식으로 처리한다.
+또한, 기부가 완료된 후에 영화 예매 (book) 시스템으로 기부 완료 상태를 알려주는 행위도 비동기식으로 처리한다. 
 
-- 이를 위하여 결제이력에 기록을 남긴 후에 곧바로 예매  되었다는 도메인 이벤트를 카프카로 송출한다(Publish)
+- 기부 이력에 기록을 남긴 후에 곧바로 기부 완료되었다는 도메인 이벤트를 카프카로 송출한다(Publish)
 
 ```
 package movie;
 
 @Entity
-@Table(name="Book_table")
-public class Book {
+@Table(name="Donation_table")
+public class Donation {
 
  ...
     @PostPersist
     public void onPostPersist(){
-        Booked booked = new Booked();
-        BeanUtils.copyProperties(this, booked);
-	
-	'''
-	
-        booked.publishAfterCommit();
+        Sent sent = new Sent();
+        BeanUtils.copyProperties(this, sent);
+        sent.publishAfterCommit();
     }
 
 }
 ```
 
-- Ticket 서비스에서는 Booked 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다:
+- 기부 서비스에서는 ticket서비스의 created 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다:
 
 ```
 package movie;
@@ -199,28 +200,25 @@ package movie;
 public class PolicyHandler{
 
     @StreamListener(KafkaProcessor.INPUT)
-    public void wheneverBooked_(@Payload Booked booked){
+    public void wheneverCreated_(@Payload Created created){
 
-        if(booked.isMe()){
+        if(created.isMe()){
             System.out.println("======================================");
-            System.out.println("##### listener  : " + booked.toJson());
+            System.out.println("##### listener  : " + created.toJson());
             System.out.println("======================================");
-            
-            Ticket ticket = new Ticket();
-            ticket.setBookingId(booked.getId());
-            ticket.setMovieName(booked.getMovieName());
-            ticket.setQty(booked.getQty());
-            ticket.setSeat(booked.getSeat());
-            ticket.setStatus("Waiting");
 
-            ticketRepository.save(ticket);
+            Donation donation = new Donation();
+            donation.setBookingId(created.getId());
+            donation.setStatus("Waiting Donation");
+
+            donationRepository.save(donation);
         }
     }
 
 }
 
 ```
-- Ticket 시스템은 예매/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, Ticket 시스템이 유지보수로 인해 잠시 내려간 상태라도 예매 받는데 문제가 없다:
+- Donation 시스템은 예매/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, Ticket 시스템이 유지보수로 인해 잠시 내려간 상태라도 예매 받는데 문제가 없다:
 
 - Ticket 서비스를 잠시 내려놓음 (ctrl+c)
 
@@ -445,11 +443,11 @@ cache:
 ```
 
 - 서비스 이미지
-<img width="1655" alt="aws_ecr_team" src="https://user-images.githubusercontent.com/60732832/108799930-0ce8cf80-75d5-11eb-97e9-3e47f8a73595.png">
+![스크린샷 2021-02-25 오전 10 02 53](https://user-images.githubusercontent.com/60732832/109087614-23b43100-7751-11eb-81a9-93d6086b7c61.png)
 
 - Pipeline
 
-![aws_team_codebuild](https://user-images.githubusercontent.com/60732832/108794185-a958a500-75c8-11eb-9a99-8d6129053774.png)
+![스크린샷 2021-02-25 오전 10 02 18](https://user-images.githubusercontent.com/60732832/109087424-c7e9a800-7750-11eb-9448-f49ffa94ac6c.png)
 
 ## Zero-downtime deploy(Readiness Probe)
 
@@ -484,15 +482,21 @@ readinessProbe:
     failureThreshold: 5
 
 ```
-<img width="1114" alt="스크린샷 2021-02-23 오후 1 49 30" src="https://user-images.githubusercontent.com/28583602/108803416-f4c97e00-75dd-11eb-9663-74bcaf27ddbf.png">
+<img width="523" alt="스크린샷 2021-02-24 오후 7 29 47" src="https://user-images.githubusercontent.com/60732832/109088331-940f8200-7752-11eb-9b52-39c11ab88632.png">
+
+<img width="522" alt="스크린샷 2021-02-24 오후 7 30 07" src="https://user-images.githubusercontent.com/60732832/109088335-9671dc00-7752-11eb-8e45-1392607140a1.png">
+
+<img width="522" alt="스크린샷 2021-02-24 오후 7 31 55" src="https://user-images.githubusercontent.com/60732832/109088339-970a7280-7752-11eb-8656-bce417d61105.png">
+
+<img width="516" alt="스크린샷 2021-02-24 오후 7 32 21" src="https://user-images.githubusercontent.com/60732832/109088343-983b9f80-7752-11eb-83c6-1afa52cdd9ce.png">
 
 ## Config Map
 
-- donation 서비스의 deployment.yml에 env 추가
+- donation 서비스의 buildspec.yaml에 env 추가
 
 
 ```
-# deployment.yaml
+# buildspec.yaml
 
   env:
     - name: NAME
@@ -503,7 +507,7 @@ readinessProbe:
 
 ```
 
-- 기부와 동시에 환경변수로 설정한 NAME이 들어가도록 코드를 변경
+- 기부와 동시에 환경변수로 설정한 NAME이 들어가도록 코드를 변경, getter/setter 함수 추가
 
 ```
 @Id
@@ -513,8 +517,18 @@ readinessProbe:
 
 private String name = System.getenv("NAME");
 
+...
+
+public String getName() {
+	return name;
+}
+
+public void setName(String name) {
+	this.name = name;
+}
+...
 ```
-- moviecm.yaml 작성
+- moviecm.yaml 작성 및 실행
 
 ```
 apiVersion: v1
@@ -529,11 +543,11 @@ data:
 
 - donation pod에 들어가서 환경변수 확인
 
-<img width="990" alt="스크린샷 2021-02-24 오후 7 56 02" src="https://user-images.githubusercontent.com/60732832/108993778-5cff8900-76de-11eb-8bad-b913b21048d4.png">
+<img width="990" alt="스크린샷 2021-02-24 오후 7 56 02" src="https://user-images.githubusercontent.com/60732832/109087799-8279aa80-7751-11eb-92d1-cfda3f76c531.png">
 
 - 기부와 동시에 name에 환경변수 적용 
 
-<img width="1483" alt="스크린샷 2021-02-23 오후 7 03 21" src="https://user-images.githubusercontent.com/28583602/108828129-ceb9d300-7609-11eb-9f9d-228ca82b8f96.png">
+![스크린샷 2021-02-25 오전 10 10 19](https://user-images.githubusercontent.com/60732832/109087936-c66caf80-7751-11eb-8798-d43859849eb5.png)
 
 
 
