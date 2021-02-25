@@ -659,10 +659,10 @@ Shortest transaction:           0.01
       cpu: "500m"
 ```
 
-- 기부 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 15프로를 넘어서면 replica 를 10개까지 늘려준다:
+- 기부 서비스에 대한 replica 를 동적으로 늘려주도록 HPA 를 설정한다. 설정은 CPU 사용량이 35프로를 넘어서면 replica 를 10개까지 늘려준다:
 
 ```
-kubectl autoscale deploy donation --min=1 --max=10 --cpu-percent=15
+kubectl autoscale deploy donation --min=1 --max=10 --cpu-percent=35
 ```
 
 - CB 에서 했던 방식대로 워크로드를 2분 동안 걸어준다.
@@ -700,7 +700,7 @@ donation   9/9     9            9           5m42s
 
 ```
 Transactions:                    976 hits
-Availability:                  89.95 %
+Availability:                  82.95 %
 Elapsed time:                 119.45 secs
 Data transferred:               0.29 MB
 Response time:                  0.61 secs
@@ -754,4 +754,4 @@ Longest transaction:            0.88
 Shortest transaction:           0.31
 
 ```
-<img width="884" alt="스크린샷 2021-02-25 오후 3 05 07" src="https://user-images.githubusercontent.com/60732832/109110666-e2387b80-777a-11eb-8936-a961def99ba5.png">
+<img width="437" alt="스크린샷 2021-02-25 오후 3 06 48" src="https://user-images.githubusercontent.com/60732832/109110785-1b70eb80-777b-11eb-9cdd-a8510dd2e4c7.png">
