@@ -713,15 +713,14 @@ Longest transaction:            0.79
 Shortest transaction:           0.41
 ```
 
-## 무정지 재배포
+## 무정지 재배포 (Readiness Probe)
 
-* 먼저 무정지 재배포가 100% 되는 것인지 확인하기 위해서 Autoscaler 이나 CB 설정을 제거함
 
 - seige 로 배포작업 직전에 워크로드를 모니터링 함.
 ```
 siege -c50 -t120S -r10 --content-type "application/json" 'http://ticket:8080/tickets POST {"status": "Printed"}'
 
-# deployment.yaml 의 readiness probe 의 설정:
+# donation의 buildspec.yaml 의 readiness probe 설정:
 
 readinessProbe:
   httpGet:
@@ -733,8 +732,12 @@ readinessProbe:
   failureThreshold: 10
 
 ```
+- 새 버전으로 이미지 배포
+```
+kubectl set image deployment.apps/donation donation=496278789073.dkr.ecr.ap-northeast-2.amazonaws.com/skccuser08-donation:8140c40acfe25a86482587b4449ee01cafdf17cd -n movie
+```
 
-- 동일한 시나리오로 재배포 한 후 Availability 확인:
+- siege의 화면으로 가서 availibility를 확인
 
 ```
 Transactions:		        1107 hits
@@ -751,5 +754,4 @@ Longest transaction:            0.88
 Shortest transaction:           0.31
 
 ```
-
-배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
+https://user-images.githubusercontent.com/28583602/108991559-9c78a600-76db-11eb-83eb-a31113f43618.png
