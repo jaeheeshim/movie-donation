@@ -54,7 +54,7 @@ MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단�
 
 ## Event Storming 결과
 
-- MSAEz 로 모델링한 이벤트스토밍 결과: http://www.msaez.io/#/storming/R6mhRNYqDQNZGOm0lF9mkOuyQb22/mine/71ff9c1518aee16ab14394848c5ab5f8
+- MSAEz 로 모델링한 이벤트스토밍 결과: http://www.msaez.io/#/storming/2KIJSHVWuTRbCkZFvMLzgjl3Jnx2/mine/07a5a0fb9e5acd18eb859ac05ae0d86d
 ![스크린샷 2021-02-25 오전 10 54 47](https://user-images.githubusercontent.com/60732832/109092763-8231dd00-775a-11eb-8667-594beb480fb6.png)
 
 ## 헥사고날 아키텍처 다이어그램 도출
@@ -87,11 +87,7 @@ mvn spring-boot:run
 
 ## 동기식 호출
 
-* 팀 프로젝트 * 
-분석단계에서의 조건 중 하나로 예매(book)->결제(pay) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다.
-
-* 개인 프로젝트 *
-티켓 발권 (ticket) -> 기부 (donation) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다.
+개인 프로젝트에서는 티켓 발권 (ticket) -> 기부 (donation) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다.
 
 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다.
 
@@ -111,7 +107,7 @@ public interface DonationService {
 }
 ```
 
-- 발권 직후(@PostPersist) 기부를 요청하도록 처리
+- 티켓 발권 직후(@PostPersist) 기부를 요청하도록 처리
 
 ```
 # Ticket.java (Entity)
@@ -143,25 +139,25 @@ public interface DonationService {
     }
 ```
 
-- 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 기부 시스템이 장애가 나면 발권 시스템도 못받는다는 것을 확인
+- 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 기부 시스템이 장애가 나면 티켓 발권 시스템도 못받는다는 것을 확인
 
 
 - 기부 (donation) 서비스를 잠시 내려놓음 (ctrl+c)
 
-1. 발권 처리
+1. 티켓 발권 처리 에러 발생
 
-<img width="688" alt="스크린샷 2021-02-23 오전 11 16 37" src="https://user-images.githubusercontent.com/28583602/108794189-ab226880-75c8-11eb-8692-cb06effe8bb2.png">
+![스크린샷 2021-02-25 오후 12 04 48](https://user-images.githubusercontent.com/60732832/109096866-b066eb00-7761-11eb-8532-c871f164e0ed.png)
 
 
 2. 기부 서비스 재기동
 ```
-cd ../payment
+cd ../donation
 mvn spring-boot:run
 ```
 
-3. 예매처리
+3. 티켓 발권 처리 정상 처리됨
 
-<img width="692" alt="스크린샷 2021-02-23 오전 11 18 23" src="https://user-images.githubusercontent.com/28583602/108794296-da38da00-75c8-11eb-8d86-fce182516fa7.png">
+![스크린샷 2021-02-25 오후 12 06 13](https://user-images.githubusercontent.com/60732832/109096984-e2784d00-7761-11eb-98a6-5da13c3c1226.png)
 
 
 ## 비동기식 호출
@@ -218,26 +214,16 @@ public class PolicyHandler{
 }
 
 ```
-- Donation 시스템은 예매/결제와 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, Ticket 시스템이 유지보수로 인해 잠시 내려간 상태라도 예매 받는데 문제가 없다:
+- Donation 시스템은 예매/결재/발권과 완전히 분리되어있으며, 이벤트 수신에 따라 처리되기 때문에, Book 시스템이 유지보수로 인해 잠시 내려간 상태라도 티켓 발권 및 기부 처리에 문제가 없다:
 
-- Ticket 서비스를 잠시 내려놓음 (ctrl+c)
+- 예매 및 결재 완료 후 (ticket 생성된 상태), Book 서비스를 잠시 내려놓음 (ctrl+c)
 
-1. 예매처리
-<img width="1056" alt="스크린샷 2021-02-23 오후 1 12 47" src="https://user-images.githubusercontent.com/28583602/108801338-d3b25e80-75d8-11eb-9a01-094c0c926c03.png">
-<img width="1441" alt="스크린샷 2021-02-23 오후 1 13 01" src="https://user-images.githubusercontent.com/28583602/108801356-dca33000-75d8-11eb-8a05-fd69895406f4.png">
+1. 티켓 발권 처리됨
 
+![스크린샷 2021-02-25 오후 12 10 59](https://user-images.githubusercontent.com/60732832/109097403-9974c880-7762-11eb-9a99-8d9f72d75e58.png)
 
-2. 예매상태 확인
-<img width="859" alt="스크린샷 2021-02-23 오후 1 15 10" src="https://user-images.githubusercontent.com/28583602/108801469-2a1f9d00-75d9-11eb-8a08-b0a3a64df1ab.png">
-
-3. Ticket 서비스 기동
-```
-cd ../ticket
-mvn spring-boot:run
-```
-
-4. 예매상태 확인
-<img width="882" alt="스크린샷 2021-02-23 오후 1 19 34" src="https://user-images.githubusercontent.com/28583602/108801714-c8136780-75d9-11eb-8a24-1022857d70e4.png">
+2. 기부 상태 확인
+![스크린샷 2021-02-25 오후 12 13 22](https://user-images.githubusercontent.com/60732832/109097537-e0fb5480-7762-11eb-83f1-fd9ac9cbd324.png)
 
 
 ## Gateway
@@ -295,11 +281,10 @@ http POST http://localhost:8088/books qty=2 movieName="soul" seat="1A,2B" totalP
 # ticket 서비스의 출력처리
 http PATCH http://localhost:8088/tickets/1 status="Printed"
 
-# 예매 상태 확인
-http http://localhost:8088/books/1
+# 기부 상태 확인
+http http://localhost:8088/donations/1
 
 ```
-<img width="1180" alt="스크린샷 2021-02-23 오후 1 32 28" src="https://user-images.githubusercontent.com/28583602/108802418-94394180-75db-11eb-93ab-c05554651c89.png">
 
 ## Mypage
 
@@ -318,9 +303,7 @@ http PATCH http://localhost:8088/tickets/1 status="Printed"
 http http://localhost:8088/mypages/1
 
 ```
-
-<img width="885" alt="스크린샷 2021-02-23 오후 1 33 46" src="https://user-images.githubusercontent.com/28583602/108802487-c34fb300-75db-11eb-8be8-1ff696dd8563.png">
-<img width="1099" alt="스크린샷 2021-02-23 오후 1 34 36" src="https://user-images.githubusercontent.com/28583602/108802521-dfebeb00-75db-11eb-9f41-6382e7b5feee.png">
+![스크린샷 2021-02-25 오후 12 20 23](https://user-images.githubusercontent.com/60732832/109098026-db523e80-7763-11eb-9de3-7d12341445bc.png)
 
 ## Polyglot
 
