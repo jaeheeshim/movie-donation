@@ -301,7 +301,7 @@ http POST http://localhost:8088/books qty=2 movieName="soul" seat="1A,2B" totalP
 http PATCH http://localhost:8088/tickets/1 status="Printed"
 
 # Mypage에서 상태 확인
-http http://localhost:8088/mypages/1
+http http://localhost:8088/mypages/2
 
 ```
 ![스크린샷 2021-02-25 오후 12 20 23](https://user-images.githubusercontent.com/60732832/109098026-db523e80-7763-11eb-9de3-7d12341445bc.png)
