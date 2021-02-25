@@ -223,6 +223,7 @@ public class PolicyHandler{
 ![스크린샷 2021-02-25 오후 12 10 59](https://user-images.githubusercontent.com/60732832/109097403-9974c880-7762-11eb-9a99-8d9f72d75e58.png)
 
 2. 기부 상태 확인
+
 ![스크린샷 2021-02-25 오후 12 13 22](https://user-images.githubusercontent.com/60732832/109097537-e0fb5480-7762-11eb-83f1-fd9ac9cbd324.png)
 
 
