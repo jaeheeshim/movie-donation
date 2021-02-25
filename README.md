@@ -289,7 +289,7 @@ http http://localhost:8088/donations/1
 
 ## Mypage
 
-- 고객은 예매 상태를 Mypage에서 확인할 수 있다.
+- 고객은 예매, 발권 및 기부 상태를 Mypage에서 확인할 수 있다.
 
 - REST API 의 테스트
 
