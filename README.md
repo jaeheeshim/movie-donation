@@ -739,19 +739,4 @@ kubectl set image deployment.apps/donation donation=496278789073.dkr.ecr.ap-nort
 
 - siege의 화면으로 가서 availibility를 확인
 
-```
-Transactions:		        1107 hits
-Availability:		       100 %
-Elapsed time:		       119.85 secs
-Data transferred:	        0.29 MB
-Response time:		        1.20 secs
-Transaction rate:	        7.99 trans/sec
-Throughput:		        0.01 MB/sec
-Concurrency:		       96.02
-Successful transactions:        1107
-Failed transactions:               0
-Longest transaction:            0.88
-Shortest transaction:           0.31
-
-```
 <img width="437" alt="스크린샷 2021-02-25 오후 3 06 48" src="https://user-images.githubusercontent.com/60732832/109110785-1b70eb80-777b-11eb-9cdd-a8510dd2e4c7.png">
