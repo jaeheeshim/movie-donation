@@ -754,4 +754,4 @@ Longest transaction:            0.88
 Shortest transaction:           0.31
 
 ```
-https://user-images.githubusercontent.com/28583602/108991559-9c78a600-76db-11eb-83eb-a31113f43618.png
+<img width="884" alt="스크린샷 2021-02-25 오후 3 05 07" src="https://user-images.githubusercontent.com/60732832/109110666-e2387b80-777a-11eb-8936-a961def99ba5.png">
