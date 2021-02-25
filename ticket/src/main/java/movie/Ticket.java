@@ -19,12 +19,23 @@ public class Ticket {
 
     @PostPersist
     public void onPostPersist(){
+        if("Waiting".equals(status)){
+            Created created = new Created();
+            BeanUtils.copyProperties(this, created);
+            created.publishAfterCommit();
+        } else {
+            System.out.println("*********************");
+            System.out.println("서킷브레이킹 테스트!!!! ");
+            System.out.println("*********************");
+            movie.external.Donation donation = new movie.external.Donation();
+            donation.setStatus("Donated");
+                
+            TicketApplication.applicationContext.getBean(movie.external.DonationService.class)
+                .send(donation);
+        }
+        
 
-        Created created = new Created();
-        BeanUtils.copyProperties(this, created);
-        created.publishAfterCommit();
-
-
+        
     }
 
     @PostUpdate
