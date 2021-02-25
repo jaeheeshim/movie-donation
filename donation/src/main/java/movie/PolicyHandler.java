@@ -20,18 +20,16 @@ public class PolicyHandler{
     }
 
     @StreamListener(KafkaProcessor.INPUT)
-    public void wheneverPrinted_(@Payload Printed printed){
+    public void wheneverCreated_(@Payload Created created){
 
-        if(printed.isMe()){
+        if(created.isMe()){
             System.out.println("======================================");
-            System.out.println("##### listener  : " + printed.toJson());
+            System.out.println("##### listener  : " + created.toJson());
             System.out.println("======================================");
 
             Donation donation = new Donation();
-            donation.setBookingId(printed.getId());
-            donation.setValue(100);
-            donation.setOrganization("Good Neighbors");
-            donation.setStatus("Sending Donation");
+            donation.setBookingId(created.getId());
+            donation.setStatus("Waiting Donation");
 
             donationRepository.save(donation);
         }
